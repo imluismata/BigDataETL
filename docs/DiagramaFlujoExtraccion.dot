@@ -1,0 +1,59 @@
+// Diagrama de flujo del proceso de extracción
+// Generar: dot -Tpng -Gdpi=150 DiagramaFlujoExtraccion.dot -o DiagramaFlujoExtraccion.png
+digraph Flujo {
+    graph [rankdir=TB, fontname="DejaVu Sans", fontsize=13, nodesep=0.3, ranksep=0.35, pad=0.3,
+           label="Flujo del proceso de extracción (E del ETL)", labelloc=t, fontcolor="#1F3864"];
+    node  [fontname="DejaVu Sans", fontsize=10, shape=box, style="rounded,filled", fillcolor="#FFFFFF", color="#5B6B7F"];
+    edge  [fontname="DejaVu Sans", fontsize=9, color="#5B6B7F"];
+
+    inicio [label="Inicio del Worker Service", shape=oval, fillcolor="#DDEBF7"];
+    conf   [label="Cargar configuración\nappsettings.json + User Secrets / variables de entorno"];
+    valida [label="¿Configuración válida?\n(ValidateOnStart)", shape=diamond, fillcolor="#FFF2CC"];
+    errorc [label="Detener con mensaje:\n\"Falta ConnectionStrings:...\"", fillcolor="#F8CBAD"];
+    reg    [label="Registrar solo las fuentes\ncon Habilitada = true"];
+    id     [label="Nueva ejecución:\ngenerar IdEjecucion (Guid)\niniciar Stopwatch total"];
+    par    [label="Lanzar las fuentes EN PARALELO\n(Task.Run + Task.WhenAll)", fillcolor="#E2EFDA"];
+
+    subgraph cluster_fuente {
+        label="Proceso de cada fuente (ProcesoExtraccion<T>) - igual para CSV, BD y API";
+        style="rounded,dashed"; color="#70AD47"; fontcolor="#375623";
+        sw     [label="Iniciar Stopwatch de la fuente"];
+        limpia [label="TRUNCATE tabla staging\n(si LimpiarStagingAntesDeExtraer)"];
+        lee    [label="Leer siguiente registro\nCSV: CsvHelper  |  BD: SqlDataReader  |  API: página JSON"];
+        hay    [label="¿Hay más\nregistros?", shape=diamond, fillcolor="#FFF2CC"];
+        add    [label="Agregar al lote"];
+        lleno  [label="¿Lote lleno?\n(TamanoLote)", shape=diamond, fillcolor="#FFF2CC"];
+        bulk   [label="SqlBulkCopy del lote\na la tabla stg"];
+        resto  [label="Guardar el último lote\n(si quedó algo)"];
+        ok     [label="Resumen: Completada\nregistros, lotes, ms"];
+        err    [label="Error en la fuente\n(archivo, conexión, 401...)\nILogger.LogError\nResumen: Fallida", fillcolor="#F8CBAD"];
+    }
+
+    une    [label="Esperar a que terminen todas las fuentes"];
+    log    [label="Guardar cada resumen en\nstg.LogExtraccion"];
+    res    [label="Mostrar resumen en ILogger\n(registros y tiempo por fuente)"];
+    inter  [label="¿IntervaloMinutos > 0?", shape=diamond, fillcolor="#FFF2CC"];
+    espera [label="Esperar el intervalo\n(PeriodicTimer)"];
+    fin    [label="Detener el Worker", shape=oval, fillcolor="#DDEBF7"];
+    tl     [label="Datos listos en staging\npara la Transformación (T)", shape=note, fillcolor="#FBE5D6"];
+
+    inicio -> conf -> valida;
+    valida -> errorc [label="No"];
+    valida -> reg    [label="Sí"];
+    reg -> id -> par -> sw;
+    sw -> limpia -> lee -> hay;
+    hay -> add   [label="Sí"];
+    add -> lleno;
+    lleno -> bulk [label="Sí"];
+    lleno -> lee  [label="No", constraint=false];
+    bulk -> lee [constraint=false];
+    hay -> resto [label="No"];
+    resto -> ok;
+    lee -> err [constraint=false, style=dashed, label="excepción", color="#C00000", fontcolor="#C00000"];
+    ok -> une; err -> une;
+    une -> log -> res -> inter;
+    inter -> espera [label="Sí"];
+    espera -> id [constraint=false];
+    inter -> fin [label="No"];
+    log -> tl [style=dotted, arrowhead=none];
+}

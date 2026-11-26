@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Capa de infraestructura: implementaciones concretas que hablan con el
+       mundo exterior (archivos CSV, SQL Server y la API REST). -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Lectura de archivos CSV -->
+    <PackageReference Include="CsvHelper" Version="33.0.1" />
+    <!-- ADO.NET para SQL Server: consultas (SqlDataReader) y carga masiva (SqlBulkCopy) -->
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="5.2.2" />
+    <!-- IHttpClientFactory -->
+    <PackageReference Include="Microsoft.Extensions.Http" Version="8.0.1" />
+    <!-- Bind() de las secciones de appsettings.json a clases de opciones -->
+    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="8.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\OpinionesClientes.Extraccion.Application\OpinionesClientes.Extraccion.Application.csproj" />
+  </ItemGroup>
+
+</Project>

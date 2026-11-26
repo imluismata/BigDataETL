@@ -1,0 +1,80 @@
+// Diagrama de arquitectura - Proceso ETL (fase de extracción)
+// Generar: dot -Tpng -Gdpi=150 DiagramaArquitectura.dot -o DiagramaArquitectura.png
+digraph Arquitectura {
+    graph [rankdir=TB, fontname="DejaVu Sans", fontsize=13, nodesep=0.35, ranksep=0.7, pad=0.3,
+           label="Arquitectura del Sistema de Análisis de Opiniones de Clientes - Fase de extracción (E del ETL)",
+           labelloc=t, fontcolor="#1F3864"];
+    node  [fontname="DejaVu Sans", fontsize=11, shape=box, style="rounded,filled", fillcolor="#FFFFFF", color="#5B6B7F"];
+    edge  [fontname="DejaVu Sans", fontsize=9, color="#5B6B7F", fontcolor="#333333"];
+
+    // ---------------- Fuentes ----------------
+    subgraph cluster_fuentes {
+        label="Fuentes de datos"; style="rounded,filled"; fillcolor="#EAF1FB"; color="#2E75B6"; fontcolor="#1F3864";
+        csv  [label="Archivo CSV\nsurveys_part1.csv\n(encuestas internas)", shape=note, fillcolor="#FFFFFF"];
+        bdf  [label="BD relacional\nTiendaOnlineDB\ndbo.Resenas\n(reseñas web)", shape=cylinder, fillcolor="#FFFFFF"];
+        api  [label="API REST\nComentariosApi\nGET /api/comentarios\n(redes sociales)\nHTTPS + X-Api-Key", fillcolor="#FFFFFF"];
+    }
+
+    // ---------------- Worker ----------------
+    subgraph cluster_worker {
+        label="Servicio ETL - Worker Service .NET 8 (Clean Architecture)"; style="rounded,filled"; fillcolor="#F3F8EC"; color="#548235"; fontcolor="#375623";
+
+        subgraph cluster_host {
+            label="Worker (host)"; style="rounded,filled"; fillcolor="#E2EFDA"; color="#70AD47";
+            worker [label="ExtraccionWorker\n(BackgroundService\n+ PeriodicTimer)"];
+        }
+        subgraph cluster_app {
+            label="Application"; style="rounded,filled"; fillcolor="#E2EFDA"; color="#70AD47";
+            orq  [label="OrquestadorExtraccion\n(fuentes en paralelo\nTask.Run + Task.WhenAll)"];
+            proc [label="ProcesoExtraccion<T>\n(lotes + Stopwatch)"];
+        }
+        subgraph cluster_infra {
+            label="Infrastructure"; style="rounded,filled"; fillcolor="#E2EFDA"; color="#70AD47";
+            ecsv [label="CsvExtractor\n(CsvHelper)"];
+            ebd  [label="DatabaseExtractor\n(ADO.NET\nSqlDataReader)"];
+            eapi [label="ApiExtractor\n(IHttpClientFactory\n+ reintentos)"];
+            stgr [label="Repositorios staging\n(SqlBulkCopy)"];
+            logr [label="LogExtraccionRepository"];
+        }
+    }
+
+    // ---------------- Transversal ----------------
+    conf [label="Configuración\nappsettings.json (sin secretos)\nUser Secrets / variables de entorno", shape=folder, fillcolor="#FFF2CC", color="#BF9000"];
+    ilog [label="ILogger\n(consola, eventos y errores)", shape=folder, fillcolor="#FFF2CC", color="#BF9000"];
+
+    // ---------------- Destinos ----------------
+    subgraph cluster_datos {
+        label="SQL Server (Docker)"; style="rounded,filled"; fillcolor="#FBE5D6"; color="#C55A11"; fontcolor="#843C0C";
+        stg [label="OpinionesClientesStaging\nesquema stg\nEncuestas | ResenasWeb |\nComentariosSociales | LogExtraccion", shape=cylinder, fillcolor="#FFFFFF"];
+        oltp [label="OpinionesClientesDB\n(datos limpios)", shape=cylinder, fillcolor="#FFFFFF"];
+        dw  [label="Base de datos analítica\nOpinionesClientesDW\n(modelo estrella)", shape=cylinder, fillcolor="#FFFFFF"];
+    }
+    tl   [label="Transformación y carga\n(T y L del ETL)", style="rounded,dashed,filled", fillcolor="#FFFFFF"];
+    dash [label="Módulo de visualización\nDashboard\n(Power BI / ASP.NET + Chart.js)", fillcolor="#EDE2F6", color="#7030A0"];
+
+    // ---------------- Relaciones ----------------
+    worker -> orq  [label="cada ejecución"];
+    orq    -> proc [label="1 por fuente"];
+    proc   -> ecsv [label="IExtractor<T>"];
+    proc   -> ebd;
+    proc   -> eapi;
+    proc   -> stgr [label="IStagingRepository<T>"];
+    orq    -> logr;
+
+    csv -> ecsv [label="lee"];
+    bdf -> ebd [label="SELECT\nparametrizado"];
+    api -> eapi [label="GET paginado"];
+
+    stgr -> stg [label="carga masiva\npor lotes"];
+    logr -> stg [label="historial"];
+
+    conf -> worker [style=dotted, arrowhead=none];
+    ilog -> worker [style=dotted, arrowhead=none];
+
+    stg  -> tl   [style=dashed, label="siguiente fase"];
+    tl   -> oltp [style=dashed];
+    oltp -> dw   [style=dashed];
+    dw   -> dash [style=dashed, label="consultas KPI"];
+
+    { rank=same; conf; ilog; }
+}

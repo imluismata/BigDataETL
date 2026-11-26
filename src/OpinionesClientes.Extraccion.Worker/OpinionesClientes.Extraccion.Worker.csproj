@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk.Worker">
+
+  <!-- Worker Service (.NET 8): el host que ejecuta la extracción.
+       Es la capa más externa: arma todo con inyección de dependencias. -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <!-- Si la máquina solo tiene un runtime más nuevo (por ejemplo .NET 10), se ejecuta con ese -->
+    <RollForward>Major</RollForward>
+    <!-- Identificador del almacén de User Secrets (credenciales fuera del código) -->
+    <UserSecretsId>opiniones-clientes-extraccion-worker</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\OpinionesClientes.Extraccion.Infrastructure\OpinionesClientes.Extraccion.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Copia el CSV de encuestas (carpeta data de la raíz) junto al ejecutable,
+         en bin/.../data/surveys_part1.csv -->
+    <None Include="..\..\data\*.csv" Link="data\%(Filename)%(Extension)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>

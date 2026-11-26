@@ -1,0 +1,62 @@
+# =====================================================================
+# .gitignore - BigDataETL
+# Solo se sube el código, los scripts SQL, los CSV de datos, los
+# diagramas y el README. Todo lo demás se queda en la computadora.
+# =====================================================================
+
+# ---------- Compilación de .NET ----------
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+*.nupkg
+TestResults/
+
+# ---------- Editores e IDEs (Rider, Visual Studio, VS Code) ----------
+.idea/
+.vs/
+.vscode/
+*.user
+*.suo
+*.rsuser
+*.DotSettings.user
+
+# ---------- Sistema operativo ----------
+.DS_Store
+._*
+Thumbs.db
+Desktop.ini
+
+# ---------- Documentos (se entregan aparte, no van en el repositorio) ----------
+*.pdf
+*.doc
+*.docx
+*.ppt
+*.pptx
+*.xls
+*.xlsx
+~$*
+
+# ---------- Comprimidos ----------
+*.zip
+*.rar
+*.7z
+*.tar.gz
+
+# ---------- Logs ----------
+*.log
+logs/
+
+# ---------- Credenciales: nunca se suben ----------
+.env
+*.env
+secrets.json
+appsettings.*.local.json
+*.pfx
+*.pem
+*.key
+
+# ---------- Diagramas ----------
+# La carpeta docs/ tiene los diagramas (PNG y .dot) y SÍ se sube.
+# Si no la quieres en el repositorio, quita el # de la línea siguiente:
+# docs/

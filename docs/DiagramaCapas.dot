@@ -1,0 +1,20 @@
+// Capas de la solución (Clean Architecture) y dependencias entre proyectos
+// Generar: dot -Tpng -Gdpi=150 DiagramaCapas.dot -o DiagramaCapas.png
+digraph Capas {
+    graph [rankdir=TB, fontname="DejaVu Sans", fontsize=13, nodesep=0.4, ranksep=0.45, pad=0.3,
+           label="Capas de la solución y dirección de las dependencias", labelloc=t, fontcolor="#1F3864"];
+    node  [fontname="DejaVu Sans", fontsize=10, shape=box, style="rounded,filled", color="#5B6B7F"];
+    edge  [fontname="DejaVu Sans", fontsize=9, color="#5B6B7F"];
+
+    worker [fillcolor="#DDEBF7", label="OpinionesClientes.Extraccion.Worker\nProgram.cs (inyección de dependencias)\nExtraccionWorker (BackgroundService)\nappsettings.json"];
+    infra  [fillcolor="#E2EFDA", label="OpinionesClientes.Extraccion.Infrastructure\nCsvExtractor | DatabaseExtractor | ApiExtractor\nStagingRepositoryBase + 3 repositorios | LogExtraccionRepository\nOpciones de cada fuente | DependencyInjection"];
+    app    [fillcolor="#FFF2CC", label="OpinionesClientes.Extraccion.Application\nIExtractor<T> | IStagingRepository<T> | ILogExtraccionRepository\nIProcesoExtraccion | IOrquestadorExtraccion\nProcesoExtraccion<T> | OrquestadorExtraccion"];
+    dom    [fillcolor="#FBE5D6", label="OpinionesClientes.Extraccion.Domain\nEncuestaExtraida | ResenaWebExtraida | ComentarioSocialExtraido"];
+
+    paq [shape=note, fillcolor="#FFFFFF", label="Paquetes externos solo en Infrastructure:\nCsvHelper, Microsoft.Data.SqlClient,\nMicrosoft.Extensions.Http"];
+
+    worker -> infra [label="referencia"];
+    infra  -> app   [label="implementa las interfaces de"];
+    app    -> dom   [label="usa"];
+    paq -> infra [style=dotted, arrowhead=none];
+}

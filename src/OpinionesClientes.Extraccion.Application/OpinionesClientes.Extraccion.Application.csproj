@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Capa de aplicación: interfaces (contratos) y la lógica del flujo de extracción.
+       No sabe nada de CSV, SQL Server ni HTTP: eso está en Infrastructure. -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Solo abstracciones: ILogger e IOptions -->
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.2" />
+    <PackageReference Include="Microsoft.Extensions.Options" Version="8.0.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\OpinionesClientes.Extraccion.Domain\OpinionesClientes.Extraccion.Domain.csproj" />
+  </ItemGroup>
+
+</Project>
