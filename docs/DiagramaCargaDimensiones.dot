@@ -1,0 +1,38 @@
+// Flujo de la carga de dimensiones del DataWarehouse
+// Generar: dot -Tpng -Gdpi=150 DiagramaCargaDimensiones.dot -o DiagramaCargaDimensiones.png
+digraph CargaDimensiones {
+    graph [rankdir=LR, fontname="DejaVu Sans", fontsize=13, nodesep=0.35, ranksep=0.55, pad=0.3,
+           label="Carga de dimensiones del DataWarehouse (OpinionesClientes.CargaDW.Worker)", labelloc=t, fontcolor="#1F3864"];
+    node  [fontname="DejaVu Sans", fontsize=10, shape=box, style="rounded,filled", fillcolor="#FFFFFF", color="#5B6B7F"];
+    edge  [fontname="DejaVu Sans", fontsize=9, color="#5B6B7F"];
+
+    subgraph cluster_origen {
+        label="Origen: OpinionesClientesDB"; style="rounded,filled"; fillcolor="#EAF1FB"; color="#2E75B6"; fontcolor="#1F3864";
+        o_cli [label="Clientes", shape=cylinder];
+        o_pro [label="Productos +\nCategorias", shape=cylinder];
+        o_opi [label="Opiniones\n(fechas y canales)", shape=cylinder];
+        o_cla [label="Clasificaciones", shape=cylinder];
+        o_pal [label="PalabrasClave", shape=cylinder];
+    }
+
+    subgraph cluster_worker {
+        label="Por cada dimensión (CargaDimensionBase<T>)"; style="rounded,filled"; fillcolor="#F3F8EC"; color="#548235"; fontcolor="#375623";
+        e [label="E - Extraer\nSELECT con\nSqlDataReader"];
+        t [label="T - Transformar\nTransformadorDimensiones\n(limpiar, validar,\nquitar duplicados)"];
+        rech [label="Filas rechazadas", fillcolor="#F8CBAD"];
+        l1 [label="L - Cargar (transacción)\n1. CREATE TABLE #Origen\n2. SqlBulkCopy -> #Origen"];
+        l2 [label="3. MERGE\nnuevo -> INSERT\ncambió -> UPDATE (SCD 1)\nigual -> sin cambios", fillcolor="#FFF2CC"];
+    }
+
+    subgraph cluster_dw {
+        label="Destino: OpinionesClientesDW"; style="rounded,filled"; fillcolor="#FBE5D6"; color="#C55A11"; fontcolor="#843C0C";
+        dims [label="DimFecha | DimSentimiento\nDimFuente | DimPalabraClave\nDimProducto | DimCliente", shape=cylinder];
+        log  [label="etl.LogCargaDimensiones\netl.ErroresCargaDimensiones", shape=cylinder];
+    }
+
+    o_cli -> e; o_pro -> e; o_opi -> e; o_cla -> e; o_pal -> e;
+    e -> t -> l1 -> l2 -> dims;
+    t -> rech [style=dashed, color="#C00000"];
+    rech -> log [style=dashed, color="#C00000"];
+    l2 -> log [style=dotted, label="resumen"];
+}

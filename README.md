@@ -1,10 +1,13 @@
-# Opiniones de Clientes - Proceso de Extracción (ETL)
+# Opiniones de Clientes - Proceso ETL
 
 Proyecto de la materia **Introducción al Big Data** (ITLA).
 
-Es la primera fase (la "E") del proceso ETL del Sistema de Análisis de Opiniones de Clientes.
-Un Worker Service en .NET 8 lee las opiniones desde tres fuentes y las guarda en tablas de
-staging en SQL Server, listas para la transformación.
+Proceso ETL del Sistema de Análisis de Opiniones de Clientes, en .NET 8:
+
+1. **Extracción:** un Worker lee las opiniones desde tres fuentes (CSV, base de datos y API)
+   y las guarda en tablas de staging.
+2. **Carga de dimensiones:** otro Worker carga las dimensiones del DataWarehouse
+   `OpinionesClientesDW` desde la base transaccional `OpinionesClientesDB`.
 
 ## Fuentes de datos
 
@@ -29,6 +32,7 @@ staging en SQL Server, listas para la transformación.
 │   ├── OpinionesClientes.Extraccion.Application     Interfaces y flujo de extracción
 │   ├── OpinionesClientes.Extraccion.Infrastructure  Extractores (CSV, BD, API) y staging
 │   ├── OpinionesClientes.Extraccion.Worker          Servicio que ejecuta la extracción
+│   ├── OpinionesClientes.CargaDW.Worker             Servicio que carga las dimensiones del DW
 │   └── OpinionesClientes.ComentariosApi             API de comentarios (fuente 3)
 ├── database/   Scripts SQL
 ├── data/       Archivo CSV de encuestas
@@ -63,6 +67,29 @@ dotnet run --project src/OpinionesClientes.Extraccion.Worker
 
 Al terminar, el Worker muestra cuántos registros extrajo de cada fuente. Para revisar los datos
 en staging se puede usar `database/04_ConsultasValidacion.sql`.
+
+## Carga de dimensiones del DataWarehouse
+
+Carga `DimFecha`, `DimSentimiento`, `DimFuente`, `DimPalabraClave`, `DimProducto` y `DimCliente`.
+Cada dimensión se extrae de `OpinionesClientesDB`, se limpia en C# y se carga con un `MERGE`
+(inserta lo nuevo y actualiza lo que cambió), así que se puede ejecutar varias veces sin duplicar.
+
+**1.** Con `OpinionesClientesDB` y `OpinionesClientesDW` ya creadas, ejecutar `database/05_PrepararCargaDW.sql`.
+
+**2.** Configurar las conexiones:
+
+```bash
+dotnet user-secrets set "ConnectionStrings:OpinionesClientesDB" "Server=localhost,1433;Database=OpinionesClientesDB;User Id=etl_extraccion;Password=<clave>;TrustServerCertificate=True" --project src/OpinionesClientes.CargaDW.Worker
+dotnet user-secrets set "ConnectionStrings:OpinionesClientesDW" "Server=localhost,1433;Database=OpinionesClientesDW;User Id=etl_extraccion;Password=<clave>;TrustServerCertificate=True" --project src/OpinionesClientes.CargaDW.Worker
+```
+
+**3.** Ejecutar:
+
+```bash
+dotnet run --project src/OpinionesClientes.CargaDW.Worker
+```
+
+El resultado se revisa con `database/06_ConsultasDimensiones.sql`.
 
 ## Autor
 
